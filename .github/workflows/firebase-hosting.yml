@@ -8,9 +8,12 @@ on:
 
 jobs:
   preview:
+    name: Deploy Preview on channel `preview`
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Use Node.js 20.x
         uses: actions/setup-node@v4
@@ -18,13 +21,6 @@ jobs:
           node-version: "20.x"
 
       - name: Install dependencies
-
-      - name: Check FIREBASE_TOKEN length
-  run: echo "Length is ${#FIREBASE_TOKEN}"
-  shell: bash
-  env:
-    FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-
         run: npm ci
 
       - name: Create .env file
@@ -38,6 +34,12 @@ jobs:
           VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}
           VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
           EOF
+
+      - name: Check FIREBASE_TOKEN length
+        run: echo "Length is ${#FIREBASE_TOKEN}"
+        shell: bash
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Build
         run: npm run build
