@@ -1,13 +1,11 @@
-# .github/workflows/firebase-hosting-pull-request.yml
-name: Preview Hosting on Push to Main
+name: Deploy to Production on Push to Main
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  preview:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,10 +21,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to Firebase Preview Channel
+      - name: Deploy to Firebase Hosting
         uses: w9jds/firebase-action@v3
         with:
-          # deploy to a channel named after the branch (here: "main")
-          args: deploy --only hosting:channel:${{ github.ref_name }}
+          args: deploy --only hosting
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
