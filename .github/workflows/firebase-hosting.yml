@@ -1,5 +1,5 @@
 # .github/workflows/firebase-hosting-preview.yml
-name: Firebase Preview Deploy
+name: Firebase Preview Deploy (Service Account)
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Use Node.js 20.x
+      - name: Use Node.js 20.x
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
@@ -39,10 +39,21 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Write service account key
-        run: echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" > sa-key.json
+      - name: Write Service Account Key
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" > "$GITHUB_WORKSPACE/sa-key.json"
 
-      - name: Deploy to Preview Channel
-        run: firebase deploy --only hosting:channel=preview
+      - name: Deploy to Preview Channel and capture URL
+        id: deploy
+        run: |
+          set -o pipefail
+          out=$(firebase deploy --only hosting:channel=preview 2>&1)
+          echo "$out"
+          url=$(echo "$out" | grep -o 'https://[^ ]*web\.app' | head -n1)
+          echo "preview_url=$url" >> $GITHUB_OUTPUT
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa-key.json
+
+      - name: Show Preview URL
+        run: |
+          echo ":: 🔗 Preview available at ${{ steps.deploy.outputs.preview_url }}"
