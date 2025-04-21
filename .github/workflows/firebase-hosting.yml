@@ -56,28 +56,23 @@ jobs:
           # authenticate via service account
           export GOOGLE_APPLICATION_CREDENTIALS="$PWD/service-account.json"
 
-          # allow the CLI to error without failing the step
-          set +e
-          OUTPUT=$(firebase hosting:channel:deploy preview --json --non-interactive 2>&1)
-          EXIT_CODE=$?
-          set -e
+          # deploy to preview channel (exit code ignored so we can still describe)
+          firebase hosting:channel:deploy preview --json || true
 
-          # print full output
-          echo "$OUTPUT"
+          # fetch channel info
+          info=$(firebase hosting:channel:describe preview --json)
 
-          # extract the preview URL
-          PREVIEW_URL=$(echo "$OUTPUT" \
-            | awk -F'"url":"' '{print $2}' \
-            | cut -d'"' -f1 \
-            | head -n1)
+          # print full JSON for debugging
+          echo "$info"
 
-          # export for later steps
-          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+          # extract the URL field
+          preview_url=$(echo "$info" \
+            | grep -o '"url":[ ]*"[^"]*"' \
+            | head -1 \
+            | sed 's/"url":[ ]*"//;s/"$//')
 
-          # warn if the CLI exit code wasn’t zero
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "⚠️ Note: firebase CLI exited with code $EXIT_CODE, but URL was captured above."
-          fi
+          # export for next step
+          echo "preview_url=$preview_url" >> $GITHUB_OUTPUT
 
       - name: Show Preview URL
         run: |
