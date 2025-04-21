@@ -1,5 +1,4 @@
-# .github/workflows/firebase-hosting-preview.yml
-name: Firebase Preview Deploy
+name: Firebase Preview Deploy (Service Account)
 
 on:
   push:
@@ -8,7 +7,7 @@ on:
 
 jobs:
   preview:
-    runs-on: ubuntu-latest # ← correct placement
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
@@ -17,7 +16,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20.x
+      - name: Setup Node.js 20.x
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
@@ -45,27 +44,11 @@ jobs:
 
       - name: Write Service Account Key
         run: |
-          echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" > service-account.json
+          cat <<EOF > service-account.json
+          ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          EOF
 
-      - name: Deploy Preview & capture URL
-        id: preview
-        continue-on-error: true # ← ignore CLI exit code
+      - name: Deploy to Preview Channel
         run: |
           export GOOGLE_APPLICATION_CREDENTIALS="$PWD/service-account.json"
-
-          # Deploy preview channel (JSON output)
-          firebase hosting:channel:deploy preview --json || true
-
-          # Describe the channel and extract URL
-          info=$(firebase hosting:channel:describe preview --json)
-          preview_url=$(echo "$info" \
-            | grep -o '"url"[[:space:]]*:[[:space:]]*"[^"]*"' \
-            | sed 's/.*"url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' \
-            | head -1)
-          echo "preview_url=$preview_url" >> $GITHUB_OUTPUT
-
-      - name: Show Preview URL
-        run: |
-          echo ""
-          echo "🔗 Preview available at ${{ steps.preview.outputs.preview_url }}"
-          echo ""
+          firebase hosting:channel:deploy preview --non-interactive
