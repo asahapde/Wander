@@ -1,5 +1,5 @@
 # .github/workflows/firebase-hosting-preview.yml
-name: Firebase Preview Deploy (Service Account)
+name: Firebase Preview Deploy
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   preview:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # ← correct placement
     defaults:
       run:
         shell: bash
@@ -17,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Use Node.js 20.x
+      - name: Setup Node.js 20.x
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
@@ -45,37 +45,27 @@ jobs:
 
       - name: Write Service Account Key
         run: |
-          cat <<EOF > service-account.json
-          ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
-          EOF
+          echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" > service-account.json
 
-      - name: Deploy to Preview Channel and capture URL
-        id: deploy
-        shell: bash
+      - name: Deploy Preview & capture URL
+        id: preview
+        continue-on-error: true # ← ignore CLI exit code
         run: |
-          # authenticate via service account
           export GOOGLE_APPLICATION_CREDENTIALS="$PWD/service-account.json"
 
-          # deploy to preview channel (exit code ignored so we can still describe)
+          # Deploy preview channel (JSON output)
           firebase hosting:channel:deploy preview --json || true
 
-          # fetch channel info
+          # Describe the channel and extract URL
           info=$(firebase hosting:channel:describe preview --json)
-
-          # print full JSON for debugging
-          echo "$info"
-
-          # extract the URL field
           preview_url=$(echo "$info" \
-            | grep -o '"url":[ ]*"[^"]*"' \
-            | head -1 \
-            | sed 's/"url":[ ]*"//;s/"$//')
-
-          # export for next step
+            | grep -o '"url"[[:space:]]*:[[:space:]]*"[^"]*"' \
+            | sed 's/.*"url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' \
+            | head -1)
           echo "preview_url=$preview_url" >> $GITHUB_OUTPUT
 
       - name: Show Preview URL
         run: |
           echo ""
-          echo "🔗 Preview available at ${{ steps.deploy.outputs.preview_url }}"
+          echo "🔗 Preview available at ${{ steps.preview.outputs.preview_url }}"
           echo ""
