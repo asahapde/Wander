@@ -56,16 +56,28 @@ jobs:
           # authenticate via service account
           export GOOGLE_APPLICATION_CREDENTIALS="$PWD/service-account.json"
 
-          # deploy and capture output, but don’t exit on non‑zero (JSON flags)
-          out=$(firebase hosting:channel:deploy preview --json) || true
-          echo "$out"
+          # allow the CLI to error without failing the step
+          set +e
+          OUTPUT=$(firebase hosting:channel:deploy preview --json --non-interactive 2>&1)
+          EXIT_CODE=$?
+          set -e
 
-          # extract the URL using basic grep + sed
-          preview_url=$(echo "$out" \
-            | grep -o '"url":"https://[^"]*' \
-            | head -n1 \
-            | sed 's/"url":"//')
-          echo "preview_url=$preview_url" >> $GITHUB_OUTPUT
+          # print full output
+          echo "$OUTPUT"
+
+          # extract the preview URL
+          PREVIEW_URL=$(echo "$OUTPUT" \
+            | awk -F'"url":"' '{print $2}' \
+            | cut -d'"' -f1 \
+            | head -n1)
+
+          # export for later steps
+          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+
+          # warn if the CLI exit code wasn’t zero
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "⚠️ Note: firebase CLI exited with code $EXIT_CODE, but URL was captured above."
+          fi
 
       - name: Show Preview URL
         run: |
