@@ -51,17 +51,20 @@ jobs:
 
       - name: Deploy to Preview Channel and capture URL
         id: deploy
+        shell: bash
         run: |
           # authenticate via service account
           export GOOGLE_APPLICATION_CREDENTIALS="$PWD/service-account.json"
 
-          # deploy only your hosting preview channel
-          # use --json to get a parsable output
-          out=$(firebase hosting:channel:deploy preview --json 2>&1)
+          # deploy and capture output, but don’t exit on non‑zero (JSON flags)
+          out=$(firebase hosting:channel:deploy preview --json) || true
           echo "$out"
 
-          # extract the 'url' field from the JSON
-          preview_url=$(echo "$out" | grep -Po '"url":"\Khttps://[^"]+')
+          # extract the URL using basic grep + sed
+          preview_url=$(echo "$out" \
+            | grep -o '"url":"https://[^"]*' \
+            | head -n1 \
+            | sed 's/"url":"//')
           echo "preview_url=$preview_url" >> $GITHUB_OUTPUT
 
       - name: Show Preview URL
